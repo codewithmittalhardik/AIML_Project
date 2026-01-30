@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NeuroSense AI | Mobile</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
+            50% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); }
+            100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
+        }
+        .glow-border { animation: glow 3s infinite; }
+    </style>
+</head>
+<body class="bg-[#020617] text-slate-200 min-h-screen flex flex-col bg-[url('https://grainy-gradients.vercel.app/noise.svg')]">
+
+    <nav class="w-full glass-panel border-b border-white/10 px-4 py-3 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <div class="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-brain text-white"></i>
+            </div>
+            <h1 class="text-lg font-bold tracking-tight text-white hidden sm:block">Neuro<span class="text-indigo-400">Sense</span></h1>
+        </div>
+        <button onclick="toggleCameraMode()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs px-4 py-2 rounded-full transition font-semibold flex items-center gap-2 active:scale-95">
+            <i class="fa-solid fa-camera-rotate text-indigo-400"></i> 
+            <span id="btn-text">Use Phone Cam</span>
+        </button>
+    </nav>
+
+    <main class="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 w-full max-w-[1920px] mx-auto">
+        
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            <div class="glass-panel rounded-2xl p-1 relative overflow-hidden shadow-2xl glow-border bg-black flex flex-col justify-center items-center aspect-video lg:aspect-video">
+                <div class="absolute top-4 left-4 z-10 flex gap-2 pointer-events-none">
+                    <span class="bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-red-400 border border-red-500/30 flex items-center gap-1">
+                        <i class="fa-solid fa-circle animate-pulse text-[6px]"></i> LIVE
+                    </span>
+                    <span id="cam-badge" class="bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-indigo-400 border border-indigo-500/30">
+                        SERVER
+                    </span>
+                </div>
+
+                <img id="server-stream" src="{% url 'video_feed' %}" class="w-full h-full object-contain">
+                <video id="mobile-video" class="w-full h-full object-cover hidden" autoplay playsinline muted></video>
+                <canvas id="mobile-canvas" class="hidden"></canvas>
+
+                <div id="mobile-overlay" class="absolute bottom-6 left-0 w-full text-center hidden z-20">
+                    <div class="inline-block bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
+                        <p class="text-slate-400 text-[10px] uppercase tracking-widest mb-0.5">Detected Emotion</p>
+                        <h2 id="emotion-text" class="text-2xl font-bold text-white drop-shadow-md">Scanning...</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden sm:grid grid-cols-3 gap-3 h-20">
+                <div class="glass-panel rounded-xl p-3 flex items-center gap-3">
+                    <div class="bg-blue-500/20 w-10 h-10 rounded-lg flex items-center justify-center text-blue-400"><i class="fa-solid fa-microchip"></i></div>
+                    <div><p class="text-[10px] text-slate-400 font-bold">MODEL</p><p class="text-sm font-semibold">CNN-Lite</p></div>
+                </div>
+                <div class="glass-panel rounded-xl p-3 flex items-center gap-3">
+                    <div class="bg-purple-500/20 w-10 h-10 rounded-lg flex items-center justify-center text-purple-400"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div><p class="text-[10px] text-slate-400 font-bold">FILTER</p><p class="text-sm font-semibold">CLAHE</p></div>
+                </div>
+                <div class="glass-panel rounded-xl p-3 flex items-center gap-3">
+                    <div class="bg-emerald-500/20 w-10 h-10 rounded-lg flex items-center justify-center text-emerald-400"><i class="fa-solid fa-server"></i></div>
+                    <div><p class="text-[10px] text-slate-400 font-bold">LATENCY</p><p class="text-sm font-semibold">~45ms</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-4 flex flex-col gap-4">
+            
+            <div class="glass-panel rounded-2xl p-2 h-36 lg:h-1/2 flex flex-col">
+                <h2 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide flex items-center gap-2 px-2 pt-1">
+                    <i class="fa-solid fa-chart-pie text-indigo-400"></i> Analytics
+                </h2>
+                <div class="flex-1 relative min-h-0">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 h-56 lg:h-1/2 flex flex-col">
+                <h2 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-indigo-400"></i> Live Log
+                </h2>
+                <div id="log-container" class="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                    <div class="text-center text-slate-600 text-xs mt-10 italic">Ready to detect...</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let isMobileMode = false;
+        let mobileInterval = null;
+        
+        const video = document.getElementById('mobile-video');
+        const canvas = document.getElementById('mobile-canvas');
+        const serverStream = document.getElementById('server-stream');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const emotionText = document.getElementById('emotion-text');
+        const btnText = document.getElementById('btn-text');
+        const camBadge = document.getElementById('cam-badge');
+
+        async function toggleCameraMode() {
+            isMobileMode = !isMobileMode;
+            if (isMobileMode) {
+                btnText.innerText = "Use Server Cam";
+                camBadge.innerText = "PHONE";
+                serverStream.classList.add('hidden');
+                video.classList.remove('hidden');
+                mobileOverlay.classList.remove('hidden');
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                    video.srcObject = stream;
+                    mobileInterval = setInterval(sendFrameToBackend, 500);
+                } catch (err) {
+                    alert("⚠️ Camera Error. Check permissions.");
+                    toggleCameraMode();
+                }
+            } else {
+                btnText.innerText = "Use Phone Cam";
+                camBadge.innerText = "SERVER";
+                serverStream.classList.remove('hidden');
+                video.classList.add('hidden');
+                mobileOverlay.classList.add('hidden');
+                if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+                clearInterval(mobileInterval);
+            }
+        }
+
+        function sendFrameToBackend() {
+            if (!video.videoWidth) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.5);
+
+            fetch('/mobile_process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataURL })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.emotion) {
+                    emotionText.innerText = data.emotion;
+                    const colors = { 'Happy':'#4ade80', 'Angry':'#f87171', 'Surprise':'#fbbf24', 'Neutral':'#e2e8f0', 'Sad':'#60a5fa', 'Fear':'#a78bfa' };
+                    emotionText.style.color = colors[data.emotion] || '#fff';
+                }
+            });
+        }
+
+        // --- CHART CONFIG (Optimized for Mobile) ---
+        const ctx = document.getElementById('emotionChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Happy', 'Sad', 'Angry', 'Surprise', 'Neutral', 'Fear'],
+                datasets: [{
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: ['#4ade80', '#60a5fa', '#f87171', '#fbbf24', '#94a3b8', '#a78bfa'],
+                    borderWidth: 0,
+                    hoverOffset: 5
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { 
+                        position: 'right', 
+                        labels: { 
+                            color: '#94a3b8', 
+                            boxWidth: 8, 
+                            font: { size: 9 } 
+                        } 
+                    } 
+                } 
+            }
+        });
+
+        const logContainer = document.getElementById('log-container');
+        let lastDominant = '';
+
+        setInterval(() => {
+            fetch('/stats').then(r => r.json()).then(data => {
+                const vals = ['Happy', 'Sad', 'Angry', 'Surprise', 'Neutral', 'Fear'].map(e => data[e] || 0);
+                chart.data.datasets[0].data = vals;
+                chart.update();
+
+                let maxVal = 0, currentDominant = 'Neutral';
+                for (const [k, v] of Object.entries(data)) { if (v > maxVal) { maxVal = v; currentDominant = k; } }
+                
+                if (currentDominant !== lastDominant && currentDominant !== 'Neutral') {
+                    addLog(currentDominant);
+                    lastDominant = currentDominant;
+                }
+            });
+        }, 1000);
+
+        function addLog(emotion) {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second:'2-digit' });
+            const styles = {
+                'Happy': 'text-green-400 border-green-500/20 bg-green-500/5',
+                'Angry': 'text-red-400 border-red-500/20 bg-red-500/5',
+                'Surprise': 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5',
+                'Sad': 'text-blue-400 border-blue-500/20 bg-blue-500/5'
+            };
+            const cls = styles[emotion] || 'text-slate-400 border-slate-500/20 bg-slate-500/5';
+            const html = `
+                <div class="flex justify-between items-center p-2 rounded border ${cls} text-xs mb-2 transition-all animate-in fade-in slide-in-from-left-4">
+                    <span class="font-bold flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${emotion}</span>
+                    <span class="opacity-60 font-mono">${time}</span>
+                </div>`;
+            if (logContainer.innerText.includes('Ready')) logContainer.innerHTML = '';
+            logContainer.insertAdjacentHTML('afterbegin', html);
+        }
+    </script>
+</body>
+</html>
