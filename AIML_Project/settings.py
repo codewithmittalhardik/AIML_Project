@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-diqrnrl#o1e=kxb*(8y&^)4gatwq9ckg5+l38mjs$wfwqob)of
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['.vercel.app', '127.0.0.1', 'localhost', '*']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -51,7 +51,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'AIML_Project.urls'
+ROOT_URLCONF = 'AIML_PROJECT.urls'
 
 TEMPLATES = [
     {
@@ -68,7 +68,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'AIML_Project.wsgi.application'
+WSGI_APPLICATION = 'AIML_PROJECT.wsgi.application'
 
 
 # Database
