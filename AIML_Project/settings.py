@@ -51,7 +51,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'AIML_backend.urls'
+ROOT_URLCONF = 'AIML_Project.urls'
 
 TEMPLATES = [
     {
@@ -68,7 +68,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'AIML_backend.wsgi.application'
+WSGI_APPLICATION = 'AIML_Project.wsgi.application'
 
 
 # Database

@@ -7,7 +7,7 @@
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "AIML_backend/wsgi.py"
+            "dest": "AIML_Project/wsgi.py"
         }
     ]
 }
