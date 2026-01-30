@@ -23,14 +23,14 @@ Follow these steps to run the project on your local machine.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/neurosense-ai.git](https://github.com/YOUR_USERNAME/neurosense-ai.git)
-cd neurosense-ai
+git clone https://github.com/codewithmittalhardik/AIML_PROJECT.git
+cd AIML_PROJECT
 ```
+
 # 🧠 NeuroSense AI
 
 **NeuroSense AI** is a real-time emotion detection web application built with **Django** and **TensorFlow**. It uses a Convolutional Neural Network (CNN) to analyze facial expressions via a webcam or mobile phone camera and classifies them into emotions (Happy, Sad, Angry, Surprise, Neutral, Fear) instantly.
 
-![Project Banner](https://via.placeholder.com/1000x300?text=NeuroSense+AI+Dashboard)
 
 ## 🚀 Features
 
@@ -53,28 +53,34 @@ Follow these steps to run the project on your local machine.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/neurosense-ai.git](https://github.com/YOUR_USERNAME/neurosense-ai.git)
+git clone https://github.com/YOUR_USERNAME/neurosense-ai.git
 cd neurosense-ai
 ```
+
 **Create a Virtual Environment**
+
 ## Windows:
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
+
 ## Mac/Linux
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
+
 **Install Dependencies**
 ```text
 pip install -r requirements.txt
 ```
+
 **Start the Server**
 ```text
 python manage.py runserver
 ```
+
 **Project Structure**
 ```text
 neurosense-ai/
