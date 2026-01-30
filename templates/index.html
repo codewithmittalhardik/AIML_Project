@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NeuroSense AI | Mobile</title>
+    <title>NeuroSense AI | Real-Time Emotion</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -23,10 +20,12 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
+        /* Smooth Scrolling & Scrollbar */
         html { scroll-behavior: smooth; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
 
+        /* Glow Animation for Active Camera */
         @keyframes glow {
             0% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.2); }
             50% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); }
@@ -53,7 +52,9 @@
     <main class="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 w-full max-w-[1920px] mx-auto">
         
         <div class="lg:col-span-8 flex flex-col gap-4">
+            
             <div class="glass-panel rounded-2xl p-1 relative overflow-hidden shadow-2xl glow-border bg-black flex flex-col justify-center items-center aspect-video lg:aspect-video">
+                
                 <div class="absolute top-4 left-4 z-10 flex gap-2 pointer-events-none">
                     <span class="bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-red-400 border border-red-500/30 flex items-center gap-1">
                         <i class="fa-solid fa-circle animate-pulse text-[6px]"></i> LIVE
@@ -64,8 +65,12 @@
                 </div>
 
                 <img id="server-stream" src="{% url 'video_feed' %}" class="w-full h-full object-contain">
+                
                 <video id="mobile-video" class="w-full h-full object-cover hidden scale-x-[-1]" autoplay playsinline muted></video>
+                
                 <canvas id="mobile-canvas" class="hidden"></canvas>
+                
+                <canvas id="overlay-canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none hidden scale-x-[-1]"></canvas>
 
                 <div id="mobile-overlay" class="absolute bottom-6 left-0 w-full text-center hidden z-20">
                     <div class="inline-block bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
@@ -118,79 +123,119 @@
         let isMobileMode = false;
         let mobileInterval = null;
         
+        // DOM Elements
         const video = document.getElementById('mobile-video');
         const canvas = document.getElementById('mobile-canvas');
+        const overlayCanvas = document.getElementById('overlay-canvas');
         const serverStream = document.getElementById('server-stream');
         const mobileOverlay = document.getElementById('mobile-overlay');
         const emotionText = document.getElementById('emotion-text');
         const btnText = document.getElementById('btn-text');
         const camBadge = document.getElementById('cam-badge');
 
+        // --- 1. TOGGLE CAMERA MODES ---
         async function toggleCameraMode() {
             isMobileMode = !isMobileMode;
+            
             if (isMobileMode) {
+                // Switch to Phone Mode
                 btnText.innerText = "Use Server Cam";
                 camBadge.innerText = "PHONE";
+                
                 serverStream.classList.add('hidden');
                 video.classList.remove('hidden');
+                overlayCanvas.classList.remove('hidden');
                 mobileOverlay.classList.remove('hidden');
+                
                 try {
+                    // Request Camera Access (Selfie Mode)
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                     video.srcObject = stream;
+                    
+                    // Start sending frames every 500ms
                     mobileInterval = setInterval(sendFrameToBackend, 500);
                 } catch (err) {
-                    alert("⚠️ Camera Error. Check permissions.");
-                    toggleCameraMode();
+                    alert("⚠️ Camera Error: " + err.message + "\nEnsure you are using HTTPS.");
+                    toggleCameraMode(); // Revert if failed
                 }
             } else {
+                // Switch back to Server Mode
                 btnText.innerText = "Use Phone Cam";
                 camBadge.innerText = "SERVER";
+                
                 serverStream.classList.remove('hidden');
                 video.classList.add('hidden');
+                overlayCanvas.classList.add('hidden');
                 mobileOverlay.classList.add('hidden');
-                if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+                
+                // Stop Camera to save battery
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
                 clearInterval(mobileInterval);
             }
         }
 
+        // --- 2. SEND FRAME & DRAW BOUNDING BOX ---
         function sendFrameToBackend() {
-    if (!video.videoWidth) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataURL = canvas.toDataURL('image/jpeg', 0.5);
-
-    fetch('/mobile_process', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json'
-            // No CSRF header needed now because we used @csrf_exempt
-        },
-        body: JSON.stringify({ image: dataURL })
-    })
-    .then(res => {
-        if (!res.ok) { throw new Error(`Server Error: ${res.status}`); }
-        return res.json();
-    })
-    .then(data => {
-        if(data.emotion) {
-            console.log("Success:", data.emotion); // <--- Check Console for this
-            emotionText.innerText = data.emotion;
+            if (!video.videoWidth) return;
             
-            // Colors update
-            const colors = { 'Happy':'#4ade80', 'Angry':'#f87171', 'Surprise':'#fbbf24', 'Neutral':'#e2e8f0', 'Sad':'#60a5fa', 'Fear':'#a78bfa' };
-            emotionText.style.color = colors[data.emotion] || '#fff';
-        }
-    })
-    .catch(err => {
-        console.error("Fetch failed:", err); // <--- THIS will tell you why it's broken
-    });
-}
+            // Prepare Image
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg', 0.5);
 
-        // --- CHART CONFIG (Optimized for Mobile) ---
-        const ctx = document.getElementById('emotionChart').getContext('2d');
-        const chart = new Chart(ctx, {
+            // Prepare Overlay
+            const overlayCtx = overlayCanvas.getContext('2d');
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            // Send to Server
+            fetch('/mobile_process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataURL })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Server Error " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if(data.emotion) {
+                    // Update Text
+                    emotionText.innerText = data.emotion;
+                    
+                    const colors = { 
+                        'Happy':'#4ade80', 'Angry':'#f87171', 'Surprise':'#fbbf24', 
+                        'Neutral':'#e2e8f0', 'Sad':'#60a5fa', 'Fear':'#a78bfa', 'Disgust':'#a3e635' 
+                    };
+                    const color = colors[data.emotion] || '#fff';
+                    emotionText.style.color = color;
+
+                    // Draw Bounding Box (If face detected)
+                    if (data.face) {
+                        const [x, y, w, h] = data.face;
+                        overlayCtx.strokeStyle = color;
+                        overlayCtx.lineWidth = 5;
+                        overlayCtx.shadowBlur = 15;
+                        overlayCtx.shadowColor = color;
+                        overlayCtx.strokeRect(x, y, w, h);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                emotionText.innerText = "Error: " + err.message;
+                emotionText.style.color = "red";
+            });
+        }
+
+        // --- 3. CHART CONFIGURATION ---
+        const chartCtx = document.getElementById('emotionChart').getContext('2d');
+        const chart = new Chart(chartCtx, {
             type: 'doughnut',
             data: {
                 labels: ['Happy', 'Sad', 'Angry', 'Surprise', 'Neutral', 'Fear'],
@@ -198,42 +243,48 @@
                     data: [0, 0, 0, 0, 0, 0],
                     backgroundColor: ['#4ade80', '#60a5fa', '#f87171', '#fbbf24', '#94a3b8', '#a78bfa'],
                     borderWidth: 0,
-                    hoverOffset: 5
+                    hoverOffset: 10
                 }]
             },
             options: { 
                 responsive: true, 
-                maintainAspectRatio: false, 
+                maintainAspectRatio: false, // Fits container height
+                cutout: '70%',
                 plugins: { 
                     legend: { 
                         position: 'right', 
-                        labels: { 
-                            color: '#94a3b8', 
-                            boxWidth: 8, 
-                            font: { size: 9 } 
-                        } 
+                        labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } 
                     } 
                 } 
             }
         });
 
+        // --- 4. LIVE STATS POLLING ---
         const logContainer = document.getElementById('log-container');
         let lastDominant = '';
 
         setInterval(() => {
-            fetch('/stats').then(r => r.json()).then(data => {
+            fetch('/stats')
+            .then(r => r.json())
+            .then(data => {
+                // Update Chart
                 const vals = ['Happy', 'Sad', 'Angry', 'Surprise', 'Neutral', 'Fear'].map(e => data[e] || 0);
                 chart.data.datasets[0].data = vals;
                 chart.update();
 
+                // Find Dominant Emotion
                 let maxVal = 0, currentDominant = 'Neutral';
-                for (const [k, v] of Object.entries(data)) { if (v > maxVal) { maxVal = v; currentDominant = k; } }
+                for (const [k, v] of Object.entries(data)) { 
+                    if (v > maxVal) { maxVal = v; currentDominant = k; } 
+                }
                 
+                // Add to Log if changed
                 if (currentDominant !== lastDominant && currentDominant !== 'Neutral') {
                     addLog(currentDominant);
                     lastDominant = currentDominant;
                 }
-            });
+            })
+            .catch(err => console.log("Stats poll error (ignore if offline)"));
         }, 1000);
 
         function addLog(emotion) {
@@ -245,11 +296,15 @@
                 'Sad': 'text-blue-400 border-blue-500/20 bg-blue-500/5'
             };
             const cls = styles[emotion] || 'text-slate-400 border-slate-500/20 bg-slate-500/5';
+            
             const html = `
                 <div class="flex justify-between items-center p-2 rounded border ${cls} text-xs mb-2 transition-all animate-in fade-in slide-in-from-left-4">
-                    <span class="font-bold flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${emotion}</span>
+                    <span class="font-bold flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>${emotion}
+                    </span>
                     <span class="opacity-60 font-mono">${time}</span>
                 </div>`;
+                
             if (logContainer.innerText.includes('Ready')) logContainer.innerHTML = '';
             logContainer.insertAdjacentHTML('afterbegin', html);
         }
