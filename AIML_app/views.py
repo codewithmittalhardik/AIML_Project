@@ -65,39 +65,52 @@ def video_feed(request):
 def process_mobile_frame(request):
     if request.method == 'POST':
         try:
-            # 1. Get Image Data
+            # 1. Get and Decode Image
             data = json.loads(request.body)
             image_data = data.get('image')
+            if not image_data: return JsonResponse({'error': 'No image'})
             
-            if not image_data:
-                return JsonResponse({'error': 'No image data found'})
-
-            # Remove header if present
-            if "base64," in image_data:
-                image_data = image_data.split(',')[1]
-
-            # 2. Decode Image
+            if "base64," in image_data: image_data = image_data.split(',')[1]
             image_bytes = base64.b64decode(image_data)
             nparr = np.frombuffer(image_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            # 3. Preprocessing
+            # 2. Convert to Grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
             
-            # Detect faces
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            # OPTIONAL: Improve contrast for bad lighting
+            gray = cv2.equalizeHist(gray)
+
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+            # 3. ROBUST DETECTION LOOP (Handle Rotations)
+            faces = []
+            
+            # Attempt 1: Normal (Upright)
+            faces = face_cascade.detectMultiScale(gray, 1.1, 4, minSize=(30, 30))
+            
+            # Attempt 2: If no face, Rotate 90 degrees (Clockwise)
+            if len(faces) == 0:
+                gray_90 = cv2.rotate(gray, cv2.ROTATE_90_CLOCKWISE)
+                faces = face_cascade.detectMultiScale(gray_90, 1.1, 4, minSize=(30, 30))
+                # Note: We don't need to rotate back because we only need the ROI for emotion prediction
+
+            # Attempt 3: If still no face, Rotate 270 degrees (Counter-Clockwise)
+            if len(faces) == 0:
+                gray_270 = cv2.rotate(gray, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                faces = face_cascade.detectMultiScale(gray_270, 1.1, 4, minSize=(30, 30))
+                # Update gray to the rotated version so extracting ROI works below
+                gray = gray_270
 
             detected_label = "Neutral"
 
             if len(faces) > 0:
-                # LOGIC: Find the largest face (the user close to camera)
+                # Find largest face
                 largest_face = max(faces, key=lambda rect: rect[2] * rect[3])
                 (x, y, w, h) = largest_face
 
                 roi_gray = gray[y:y+h, x:x+w]
                 
-                # Check if model loaded correctly before predicting
                 if mobile_model:
                     roi_gray = cv2.resize(roi_gray, (48, 48))
                     roi_gray = roi_gray.astype('float32') / 255.0
@@ -108,20 +121,14 @@ def process_mobile_frame(request):
                     max_index = int(np.argmax(prediction))
                     detected_label = EMOTION_DICT.get(max_index, "Neutral")
 
-            # 4. Update Stats
+            # Update Stats
             if detected_label in emotion_stats:
                 emotion_stats[detected_label] += 1
-            else:
-                 # In case 'Disgust' or other labels appear that aren't in initial dict
-                emotion_stats[detected_label] = 1
 
             return JsonResponse({'emotion': detected_label})
             
         except Exception as e:
-            print(f"Mobile Process Error: {e}")
+            print(f"Error: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid Request'}, status=400)
-
-def get_stats(request):
-    return JsonResponse(emotion_stats)

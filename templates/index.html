@@ -64,7 +64,7 @@
                 </div>
 
                 <img id="server-stream" src="{% url 'video_feed' %}" class="w-full h-full object-contain">
-                <video id="mobile-video" class="w-full h-full object-cover hidden" autoplay playsinline muted></video>
+                <video id="mobile-video" class="w-full h-full object-cover hidden scale-x-[-1]" autoplay playsinline muted></video>
                 <canvas id="mobile-canvas" class="hidden"></canvas>
 
                 <div id="mobile-overlay" class="absolute bottom-6 left-0 w-full text-center hidden z-20">
