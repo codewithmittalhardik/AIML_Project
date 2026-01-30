@@ -154,27 +154,39 @@
         }
 
         function sendFrameToBackend() {
-            if (!video.videoWidth) return;
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataURL = canvas.toDataURL('image/jpeg', 0.5);
+    if (!video.videoWidth) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.5);
 
-            fetch('/mobile_process', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: dataURL })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.emotion) {
-                    emotionText.innerText = data.emotion;
-                    const colors = { 'Happy':'#4ade80', 'Angry':'#f87171', 'Surprise':'#fbbf24', 'Neutral':'#e2e8f0', 'Sad':'#60a5fa', 'Fear':'#a78bfa' };
-                    emotionText.style.color = colors[data.emotion] || '#fff';
-                }
-            });
+    fetch('/mobile_process', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json'
+            // No CSRF header needed now because we used @csrf_exempt
+        },
+        body: JSON.stringify({ image: dataURL })
+    })
+    .then(res => {
+        if (!res.ok) { throw new Error(`Server Error: ${res.status}`); }
+        return res.json();
+    })
+    .then(data => {
+        if(data.emotion) {
+            console.log("Success:", data.emotion); // <--- Check Console for this
+            emotionText.innerText = data.emotion;
+            
+            // Colors update
+            const colors = { 'Happy':'#4ade80', 'Angry':'#f87171', 'Surprise':'#fbbf24', 'Neutral':'#e2e8f0', 'Sad':'#60a5fa', 'Fear':'#a78bfa' };
+            emotionText.style.color = colors[data.emotion] || '#fff';
         }
+    })
+    .catch(err => {
+        console.error("Fetch failed:", err); // <--- THIS will tell you why it's broken
+    });
+}
 
         // --- CHART CONFIG (Optimized for Mobile) ---
         const ctx = document.getElementById('emotionChart').getContext('2d');
