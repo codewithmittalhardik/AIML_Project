@@ -1,5 +1,0 @@
-Django==5.0.1
-gunicorn
-whitenoise
-numpy
-tensorflow-cpu 
